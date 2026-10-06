@@ -1,0 +1,697 @@
+{
+  "name": "Legal AI Receptionist (Telegram)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "a24f9db5-e55a-4b5f-befa-a32c9bae9f5e",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        640,
+        -16
+      ],
+      "webhookId": "REPLACE_AFTER_ACTIVATION",
+      "credentials": {
+        "telegramApi": {
+          "id": "5HKE8pdWA4KEs3Ur",
+          "name": "Test Tele Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "=You are Aisha, the virtual receptionist for Islam Law Chamber. You are talking to a potential client on Telegram. Today's date/time: {{ $now.format('yyyy-MM-dd HH:mm') }} ({{ $now.format('cccc') }}).\n\nYour job:\n1. Greet politely and ask how you can help.\n2. Answer BASIC questions only using the FIRM_INFO below. Never give legal advice, never answer questions about the merits of a case, never guess at law. If asked for legal advice, say a licensed attorney needs to review their case in a consultation.\n\nBOOKING A NEW CONSULTATION:\n3. If the person wants to book a consultation, first collect: full name, phone number, email, and a one-line reason for the visit.\n4. Ask what day(s) they'd prefer, then call the \"Check Calendar Availability\" tool for that day (or the next few office days) to see free slots during office hours. Only offer times that are actually free. Never invent or assume availability without checking.\n5. Let the client pick one open slot from what the tool returns. Confirm all details (name, phone, email, reason, chosen date/time) back to them before finalizing.\n6. Once confirmed, call the \"Save Appointment to Sheet\" tool with the collected fields, including their Telegram chat id: {{ $json.message.chat.id }}, and the Confirmed DateTime.\n7. Then call the \"Create Calendar Event\" tool to place the confirmed slot on the office calendar, using the same client details as the event description. Note the event id it returns.\n8. Immediately call the \"Update Appointment Row\" tool with that same chat id and the Event ID you just got, so the row is linked to its calendar event (leave other fields blank).\n9. Then call the \"Notify Lawyer by Email\" tool with a clear subject and a body containing the client's full name, phone, email, reason for visit, and the confirmed date/time, so the office is alerted immediately.\n10. After all tools succeed, tell the client their appointment is booked and confirmed for the chosen time.\n\nCANCELLING AN APPOINTMENT:\n11. If the client wants to cancel, call \"Find Appointment\" with their Telegram chat id to locate their booking and its Event ID. If none is found, tell them you don't see an appointment on file.\n12. Confirm with the client which appointment they want to cancel (state the date/time back to them) before doing anything.\n13. Once confirmed, call \"Delete Calendar Event\" with that Event ID, then call \"Update Appointment Row\" with the same chat id and Status set to \"Cancelled\".\n14. Let the client know the cancellation is done, and call \"Notify Lawyer by Email\" so the office knows too.\n\nRESCHEDULING AN APPOINTMENT:\n15. If the client wants to change the time, call \"Find Appointment\" first to get their current Event ID and details.\n16. Ask their new preferred day(s), call \"Check Calendar Availability\" to find a free slot, and confirm the new time with the client.\n17. Once confirmed, call \"Update an event in Google Calendar\" with that same Event ID and the new start/end time — this moves the existing event instead of creating a duplicate.\n18. Then call \"Update Appointment Row\" with the same chat id, the new Confirmed DateTime, and Status \"Rescheduled\".\n19. Confirm the new time to the client and call \"Notify Lawyer by Email\" with the updated details.\n\n20. Keep replies short and warm, suitable for a chat app (2-4 sentences).\n\nFIRM_INFO:\n- Practice areas: Law of Succession, Family Law, Law of Torts, Property Law, Contract Law, etc\n- Office hours: 9 am - 10 pm, Friday is off\n- Office address: Charfession, Bhola\n- Consultation fee: 500 Tk\n- Languages: Bengali and English\n- Appointment length: [30 minutes]\n\nNever invent information that is not in FIRM_INFO. If unsure, say you will have someone from the office follow up."
+        }
+      },
+      "id": "8848e4c9-72ca-45c2-b877-ba00d72a83fc",
+      "name": "AI Receptionist Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1344,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.5",
+          "mode": "list",
+          "cachedResultName": "gpt-5.5"
+        },
+        "options": {}
+      },
+      "id": "91564f3f-86d5-4be4-91d1-0b8825286a2e",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        688,
+        288
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "5gY3DUEKRTde2xN1",
+          "name": "OpenAI account 57"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.message.chat.id }}",
+        "contextWindowLength": 15
+      },
+      "id": "d68a579d-c3d4-4a10-b134-271386f48242",
+      "name": "Chat Memory (per Telegram user)",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        880,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1wwgp8iAGKJANN5-v4jatEM1nQfglaNFvdEO4qvn7z1k",
+          "mode": "list",
+          "cachedResultName": "Legal AI Assistant",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wwgp8iAGKJANN5-v4jatEM1nQfglaNFvdEO4qvn7z1k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Client Information",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wwgp8iAGKJANN5-v4jatEM1nQfglaNFvdEO4qvn7z1k/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date Submitted": "={{ $now.format('yyyy-MM-dd HH:mm') }}",
+            "Telegram Chat ID": "={{ $fromAI('chat_id', 'Telegram chat id of the client', 'string') }}",
+            "Full Name": "={{ $fromAI('full_name', 'Client full name', 'string') }}",
+            "Phone": "={{ $fromAI('phone', 'Client phone number', 'string') }}",
+            "Email": "={{ $fromAI('email', 'Client email address', 'string') }}",
+            "Reason": "={{ $fromAI('reason', 'One line reason for consultation', 'string') }}",
+            "Preferred Times": "={{ $fromAI('preferred_times', 'Client preferred date/time windows', 'string') }}",
+            "Status": "New - Needs Confirmation"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date Submitted",
+              "displayName": "Date Submitted",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Telegram Chat ID",
+              "displayName": "Telegram Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Reason",
+              "displayName": "Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Preferred Times",
+              "displayName": "Preferred Times",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c602588e-4aa2-46fd-9c4e-99c8d4b44b0d",
+      "name": "Save Appointment to Sheet",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        1040,
+        304
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "dUGio0TfzyEvSOE0",
+          "name": "Google Sheets account 379"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "46b71e53-7b6e-4b7b-a585-70ad9385f386",
+      "name": "Send Telegram Reply",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2080,
+        -16
+      ],
+      "webhookId": "bd0e1de4-e0ce-42ac-8ae2-6da347923be2",
+      "credentials": {
+        "telegramApi": {
+          "id": "5HKE8pdWA4KEs3Ur",
+          "name": "Test Tele Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "missingbangla@gmail.com",
+          "mode": "id"
+        },
+        "timeMin": "={{ $fromAI('range_start', 'Start of the date/time range to check, ISO 8601', 'string') }}",
+        "timeMax": "={{ $fromAI('range_end', 'End of the date/time range to check, ISO 8601', 'string') }}",
+        "options": {
+          "orderBy": "startTime"
+        }
+      },
+      "id": "a50f44e6-7c17-4945-88d2-f367273d997d",
+      "name": "Check Calendar Availability",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1200,
+        304
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "TGWop5waf65DlPVq",
+          "name": "Google Calendar account 157"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "missingbangla@gmail.com",
+          "mode": "id"
+        },
+        "start": "={{ $fromAI('event_start', 'Confirmed appointment start time, ISO 8601', 'string') }}",
+        "end": "={{ $fromAI('event_end', 'Confirmed appointment end time, ISO 8601', 'string') }}",
+        "additionalFields": {
+          "description": "={{ $fromAI('event_description', 'Client name, phone, email, and reason for visit', 'string') }}",
+          "summary": "={{ $fromAI('event_title', 'Short title, e.g. Consultation - client full name', 'string') }}"
+        }
+      },
+      "id": "657f64ef-df7e-4ab4-ba2a-e8387c6eceb0",
+      "name": "Create Calendar Event",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1344,
+        304
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "TGWop5waf65DlPVq",
+          "name": "Google Calendar account 157"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "awesometechnologybd@gmail.com",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', `Short subject line, e.g. New consultation booked - client name`, 'string') }}",
+        "emailType": "text",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', `Full appointment details: client full name, phone, email, reason for visit, and confirmed date/time`, 'string') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "ea3d5a2b-eca3-4c15-8d36-f072631d588c",
+      "name": "Notify Lawyer by Email",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        1824,
+        304
+      ],
+      "webhookId": "62caa21c-6341-4259-a3a7-5a8bc0c07801",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "eWMKooLwIFnztSUq",
+          "name": "Gmail account 314"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1wwgp8iAGKJANN5-v4jatEM1nQfglaNFvdEO4qvn7z1k",
+          "mode": "list",
+          "cachedResultName": "Legal AI Assistant",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wwgp8iAGKJANN5-v4jatEM1nQfglaNFvdEO4qvn7z1k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Client Information",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wwgp8iAGKJANN5-v4jatEM1nQfglaNFvdEO4qvn7z1k/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Telegram Chat ID",
+              "lookupValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('values0_Value', `Telegram chat id of the client`, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d4c9f622-1bd5-4d43-b1db-419e063f1808",
+      "name": "Find Appointment",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        1488,
+        304
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "dUGio0TfzyEvSOE0",
+          "name": "Google Sheets account 379"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1wwgp8iAGKJANN5-v4jatEM1nQfglaNFvdEO4qvn7z1k",
+          "mode": "list",
+          "cachedResultName": "Legal AI Assistant",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wwgp8iAGKJANN5-v4jatEM1nQfglaNFvdEO4qvn7z1k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Client Information",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wwgp8iAGKJANN5-v4jatEM1nQfglaNFvdEO4qvn7z1k/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Telegram Chat ID": "={{ $fromAI('chat_id', 'Telegram chat id of the client', 'string') }}",
+            "Status": "={{ $fromAI('status', 'New status, e.g. Confirmed, Cancelled, Rescheduled', 'string') }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "Telegram Chat ID"
+          ],
+          "schema": [
+            {
+              "id": "Date Submitted",
+              "displayName": "Date Submitted",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Telegram Chat ID",
+              "displayName": "Telegram Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reason",
+              "displayName": "Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Preferred Times",
+              "displayName": "Preferred Times",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "ab1dd268-8353-4d96-aa41-f395dd1c491a",
+      "name": "Update Appointment Row",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        1648,
+        304
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "dUGio0TfzyEvSOE0",
+          "name": "Google Sheets account 379"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "missingbangla@gmail.com",
+          "mode": "id"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', `The Google Calendar event id to delete`, 'string') }}",
+        "options": {}
+      },
+      "id": "ea3774f1-b912-4e6c-8259-0b9cd354f063",
+      "name": "Delete Calendar Event",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        2144,
+        304
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "TGWop5waf65DlPVq",
+          "name": "Google Calendar account 157"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "missingbangla@gmail.com",
+          "mode": "list",
+          "cachedResultName": "missingbangla@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "updateFields": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1984,
+        304
+      ],
+      "id": "d375897d-95ac-45a0-819a-5a359a5786d9",
+      "name": "Update an event in Google Calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "TGWop5waf65DlPVq",
+          "name": "Google Calendar account 157"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Memory (per Telegram user)": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Appointment to Sheet": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Calendar Availability": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Calendar Event": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Receptionist Agent": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Lawyer by Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Appointment": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Appointment Row": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Calendar Event": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update an event in Google Calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "1c162e07-7101-4142-bd70-f6b1cecc886c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "50918ee0be4fd9ad8edd59da0eb4c4a6502c186d6a425a1cf635ba824838446e"
+  },
+  "nodeGroups": [],
+  "id": "CoUjOb7ZH6WN4Kpm",
+  "tags": []
+}
